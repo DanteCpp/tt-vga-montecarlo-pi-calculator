@@ -75,22 +75,22 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
                                   & pix_x > W/2-H/3 & pix_x < W/2+H/3
                                   & pix_y > H/2-H/3 & pix_y < H/2+H/3 ;
 
-  reg [31:0] in_circle;
+  reg [15:0] in_circle;
   always @(posedge clk) begin 
     if(~rst_n)
-      in_circle <= 32'd0;
+      in_circle <= 0;
     else if(((rnd_x-W/2)*(rnd_x-W/2)+(rnd_y-H/2)*(rnd_y-H/2)) < H*H/9)
       if(ui_in[0])
-        in_circle <= in_circle + 32'd2;
+        in_circle <= in_circle + 2;
   end 
 
-  reg [31:0] in_square;
+  reg [15:0] in_square;
   always @(posedge clk) begin 
     if(~rst_n)
-      in_square <= 32'd0;
+      in_square <= 0;
     else if((rnd_x > W/2-H/3) & (rnd_x < W/2+H/3) & (pix_y < H/2+H/3) & (pix_y > H/2-H/3))
       if(ui_in[0])
-        in_square <= in_square + 32'd1;
+        in_square <= in_square + 1;
   end 
 
 //****************************************************//
@@ -99,7 +99,7 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
 
   parameter DIGIT_WIDTH = 16;
   parameter DIGIT_HEIGTH = 16;
-  parameter N_DIGITS = 10;
+  parameter N_DIGITS = 5;
   genvar i;
 
   parameter d0_y = 1;
@@ -108,17 +108,17 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
   
   for(i=0; i < N_DIGITS; i=i+1) begin 
     always @(posedge clk) begin
-      case ((in_circle / (32'd10**i)) % 32'd10)
-        32'd0: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        32'd1: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & one[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        32'd2: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & two[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];      
-        32'd3: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & three[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        32'd4: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & four[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        32'd5: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & five[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        32'd6: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & six[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        32'd7: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & seven[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        32'd8: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & eight[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];          
-        32'd9: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & nine[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];                
+      case ((in_circle / (10**i)) % 10)
+        0: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
+        1: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & one[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
+        2: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & two[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];      
+        3: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & three[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
+        4: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & four[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
+        5: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & five[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
+        6: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & six[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
+        7: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & seven[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
+        8: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & eight[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];          
+        9: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & nine[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];                
         default: ; 
       endcase
     end
@@ -130,17 +130,17 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
 
   for(i=0; i < N_DIGITS; i=i+1) begin 
     always @(posedge clk) begin
-      case ((in_square / (32'd10**i)) % 32'd10)
-        32'd0: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        32'd1: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & one[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        32'd2: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & two[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];      
-        32'd3: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & three[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        32'd4: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & four[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        32'd5: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & five[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        32'd6: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & six[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        32'd7: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & seven[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        32'd8: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & eight[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];          
-        32'd9: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & nine[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];                
+      case ((in_square / (10**i)) % 10)
+        0: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
+        1: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & one[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
+        2: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & two[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];      
+        3: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & three[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
+        4: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & four[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
+        5: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & five[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
+        6: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & six[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
+        7: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & seven[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
+        8: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & eight[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];          
+        9: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & nine[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];                
         default: ; 
       endcase
     end
@@ -176,8 +176,8 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
 
   wire digit0;
   wire digit1;
-  assign digit0 = d0[0] | d0[1] | d0[2] | d0[3] | d0[4] | d0[5] | d0[6] | d0[7] | d0[8] | d0[9];
-  assign digit1 = d1[0] | d1[1] | d1[2] | d1[3] | d1[4] | d1[5] | d1[6] | d1[7] | d1[8] | d1[9];
+  assign digit0 = d0[0] | d0[1] | d0[2] | d0[3] | d0[4];
+  assign digit1 = d1[0] | d1[1] | d1[2] | d1[3] | d1[4];
 
   wire digits;
   assign digits = digit0 | digit1 | digit2 | digit3 | digit4 | line;
