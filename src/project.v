@@ -67,7 +67,7 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
                   pix_y == H/2-H/3 & pix_x > W/2-H/3 & pix_x < W/2+H/3;
 
   wire line;
-  assign line = pix_y < 41 & pix_y > 39 & pix_x > 16*16 & pix_x < 16*26 |
+  assign line = pix_y < 41 & pix_y > 39 & pix_x > 16*16 & pix_x < 16*(16+N_DIGITS) |
                 pix_y < 41 & pix_y > 39 & pix_x > 16*14 & pix_x < 16*15;
 
   wire random_point;
@@ -75,7 +75,7 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
                                   & pix_x > W/2-H/3 & pix_x < W/2+H/3
                                   & pix_y > H/2-H/3 & pix_y < H/2+H/3 ;
 
-  parameter N_DIGITS = 6;
+  parameter N_DIGITS = 5;
   genvar i;
 
   reg [3:0] in_circle [N_DIGITS-1:0];
