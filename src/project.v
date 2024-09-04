@@ -75,7 +75,7 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
                                   & pix_x > W/2-H/3 & pix_x < W/2+H/3
                                   & pix_y > H/2-H/3 & pix_y < H/2+H/3 ;
 
-  parameter N_DIGITS = 10;
+  parameter N_DIGITS = 6;
   genvar i;
 
   reg [3:0] in_circle [N_DIGITS-1:0];
