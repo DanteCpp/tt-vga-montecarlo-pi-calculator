@@ -212,8 +212,8 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
 
   wire digit0;
   wire digit1;
-  assign digit0 = d0[0] | d0[1] | d0[2] | d0[3] | d0[4] | d0[5] | d0[6] | d0[7] | d0[8] | d0[9];
-  assign digit1 = d1[0] | d1[1] | d1[2] | d1[3] | d1[4] | d1[5] | d1[6] | d1[7] | d1[8] | d1[9];
+  assign digit0 = d0[0] | d0[1] | d0[2] | d0[3] | d0[4] | d0[5];
+  assign digit1 = d1[0] | d1[1] | d1[2] | d1[3] | d1[4] | d1[5];
 
   wire digits;
   assign digits = digit0 | digit1 | digit2 | digit3 | digit4 | line;
