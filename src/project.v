@@ -75,7 +75,7 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
                                   & pix_x > W/2-H/3 & pix_x < W/2+H/3
                                   & pix_y > H/2-H/3 & pix_y < H/2+H/3 ;
 
-  parameter N_DIGITS = 5;
+  parameter N_DIGITS = 4;
   genvar i;
 
   reg [3:0] in_circle [N_DIGITS-1:0];
@@ -212,8 +212,8 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
 
   wire digit0;
   wire digit1;
-  assign digit0 = d0[0] | d0[1] | d0[2] | d0[3] | d0[4] | d0[5];
-  assign digit1 = d1[0] | d1[1] | d1[2] | d1[3] | d1[4] | d1[5];
+  assign digit0 = d0[0] | d0[1] | d0[2] | d0[3];
+  assign digit1 = d1[0] | d1[1] | d1[2] | d1[3];
 
   wire digits;
   assign digits = digit0 | digit1 | digit2 | digit3 | digit4 | line;
