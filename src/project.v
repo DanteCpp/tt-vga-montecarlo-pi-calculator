@@ -100,13 +100,14 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
   parameter DIGIT_WIDTH = 16;
   parameter DIGIT_HEIGTH = 16;
   parameter N_DIGITS = 10;
-  integer i;
+  genvar i;
 
   parameter d0_y = 1;
   parameter d0_x = 16;
   reg [N_DIGITS-1:0] d0;
-  always @(posedge clk) begin
-    for(i=0; i < N_DIGITS; i=i+1) begin 
+  
+  for(i=0; i < N_DIGITS; i=i+1) begin 
+    always @(posedge clk) begin
       case ((in_circle / (32'd10**i)) % 32'd10)
         32'd0: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
         32'd1: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & one[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
@@ -126,8 +127,9 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
   parameter d1_y = 3;
   parameter d1_x = 16;
   reg [N_DIGITS-1:0] d1;
-  always @(posedge clk) begin
-    for(i=0; i < N_DIGITS; i=i+1) begin 
+
+  for(i=0; i < N_DIGITS; i=i+1) begin 
+    always @(posedge clk) begin
       case ((in_square / (32'd10**i)) % 32'd10)
         32'd0: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
         32'd1: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & one[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
@@ -145,19 +147,19 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
   end
 
   parameter d2_y = 1;
-  parameter d2_x = 15;
+  parameter d2_x = 5;
   wire digit2;
-  assign digit2 = (pix_x > (d2_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d2_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d2_y*DIGIT_HEIGTH & pix_y < (d2_y+1)*DIGIT_HEIGTH) & pi[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
+  assign digit2 = (pix_x > (d2_x+N_DIGITS-1)*DIGIT_WIDTH & pix_x < (d2_x+N_DIGITS)*DIGIT_WIDTH) & (pix_y > d2_y*DIGIT_HEIGTH & pix_y < (d2_y+1)*DIGIT_HEIGTH) & pi[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
 
   parameter d3_y = 2;
-  parameter d3_x = 16;
+  parameter d3_x = 6;
   wire digit3;
-  assign digit3 = (pix_x > (d3_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d3_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d3_y*DIGIT_HEIGTH & pix_y < (d3_y+1)*DIGIT_HEIGTH) & equal[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
+  assign digit3 = (pix_x > (d3_x+N_DIGITS-1)*DIGIT_WIDTH & pix_x < (d3_x+N_DIGITS)*DIGIT_WIDTH) & (pix_y > d3_y*DIGIT_HEIGTH & pix_y < (d3_y+1)*DIGIT_HEIGTH) & equal[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
 
   parameter d4_y = 3;
-  parameter d4_x = 15;
+  parameter d4_x = 5;
   wire digit4;
-  assign digit4 = (pix_x > (d4_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d4_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d4_y*DIGIT_HEIGTH & pix_y < (d4_y+1)*DIGIT_HEIGTH) & four[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
+  assign digit4 = (pix_x > (d4_x+N_DIGITS-1)*DIGIT_WIDTH & pix_x < (d4_x+N_DIGITS)*DIGIT_WIDTH) & (pix_y > d4_y*DIGIT_HEIGTH & pix_y < (d4_y+1)*DIGIT_HEIGTH) & four[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
 
 /*
   parameter dgt0_x = 0;
@@ -201,7 +203,7 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
   always @(posedge clk) begin
       if (~rst_n) begin
       // Set to a non-zero seed value when reset
-      lfsr_reg <= 20'h80001; // Non-zero seed
+      lfsr_reg <= 20'h80a01; // Non-zero seed
     end else if( ui_in[0])begin
       // Shift left by one, then bring in the new feedback bit
         lfsr_reg <= {lfsr_reg[18:0], feedback};
