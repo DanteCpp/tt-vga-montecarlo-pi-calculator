@@ -19,37 +19,7 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
   input  wire       rst_n     // reset_n - low to reset
 );
 
-    // VGA signals
-  wire hsync;
-  wire vsync;
-  wire [1:0] R;
-  wire [1:0] G;
-  wire [1:0] B;
-  wire video_active;
-  wire [9:0] pix_x;
-  wire [9:0] pix_y;
-
-  // TinyVGA PMOD
-  assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
-
-  // Unused outputs assigned to 0.
-  assign uio_out = 0;
-  assign uio_oe  = 0;
-
-  // Suppress unused signals warning
-  wire _unused_ok = &{ena, ui_in, uio_in};
-
-  hvsync_generator hvsync_gen(
-    .clk(clk),
-    .reset(~rst_n),
-    .hsync(hsync),
-    .vsync(vsync),
-    .display_on(video_active),
-    .hpos(pix_x),
-    .vpos(pix_y)
-  );
-
-  //****************************************************//
+    //****************************************************//
   //******************* GRAPHICS ***********************//
   //****************************************************//
   
@@ -66,164 +36,75 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
                   pix_y == H/2+H/3 & pix_x > W/2-H/3 & pix_x < W/2+H/3 | 
                   pix_y == H/2-H/3 & pix_x > W/2-H/3 & pix_x < W/2+H/3;
 
-  wire line;
-  assign line = pix_y < 41 & pix_y > 39 & pix_x > 16*16 & pix_x < 16*(16+N_DIGITS) |
-                pix_y < 41 & pix_y > 39 & pix_x > 16*14 & pix_x < 16*15;
-
   wire random_point;
   assign random_point = ((pix_x > rnd_x-10) & (pix_x < rnd_x+10)) & ((pix_y > rnd_y-10) & (pix_y < rnd_y+10)) 
                                   & pix_x > W/2-H/3 & pix_x < W/2+H/3
                                   & pix_y > H/2-H/3 & pix_y < H/2+H/3 ;
 
-  parameter N_DIGITS = 4;
+  //****************************************************//
+  //******************* PI Calculation *****************//
+  //****************************************************//
+
+  parameter N_DIGITS = 10;
   genvar i;
 
-  reg [3:0] in_circle [N_DIGITS-1:0];
-  wire [N_DIGITS-1:1] in_circle_flag;
+  reg [31:0] in_circle ;
+  reg [31:0] in_square;
 
   always @(posedge clk) begin
-    if(~rst_n)
-      in_circle[0] <= 4'd0;
-    if(ui_in[0])
-    if(in_circle[0] < 4'd10)
-      in_circle[0] <= in_circle[0] + 4'd1;
-    else
-      in_circle[0] <= 4'd0; 
-  end
-
-  for(i=1;i<N_DIGITS;i=i+1) begin
-    assign in_circle_flag[i] = in_circle[i-1] > 4'd9 ? 1:0;
-    always @(posedge in_circle_flag[i]) begin 
-      if(~rst_n)
-        in_circle[i] <= 4'd0;
-      else if((((rnd_x-W/2)*(rnd_x-W/2)+(rnd_y-H/2)*(rnd_y-H/2)) < H*H/9) & ui_in[0])
-        if(in_circle[i] < 4'd10 )
-          in_circle[i] <= in_circle[i] + 4'd1;
-        else
-          in_circle[i] <= 4'd0;
+    if(~rst_n) begin
+      in_circle <= 32'd1;
+      in_square <= 32'd1;
+    end
+    if(ui_in[0]) begin 
+      if((pix_x-W/2)*(pix_x-W/2) + (pix_y-H/2)*(pix_y-H/2) <= H*H/9)
+        in_circle <= in_circle + 32'd1;
+      if((rnd_x > W/2-H/3) & (rnd_x < W/2+H/3) & (pix_y < H/2+H/3) & (pix_y > H/2-H/3)) 
+        in_square <= in_square + 32'd1;
     end
   end
-
-  reg [3:0] in_square [N_DIGITS-1:0];
-  wire [N_DIGITS-1:1] in_square_flag;
-
-  always @(posedge clk) begin
-    if(~rst_n)
-      in_square[0] <= 4'd0;
-    if(ui_in[0])
-    if(in_square[0] < 4'd10)
-      in_square[0] <= in_square[0] + 4'd1;
-    else
-      in_square[0] <= 4'd0; 
-  end
-
-  for(i=1;i<N_DIGITS;i=i+1) begin
-    assign in_square_flag[i] = in_square[i-1] > 4'd9 ? 1:0;
-    always @(posedge in_square_flag[i]) begin 
-      if(~rst_n)
-        in_square[i] <= 4'd0;
-      else if(((rnd_x > W/2-H/3) & (rnd_x < W/2+H/3) & (pix_y < H/2+H/3) & (pix_y > H/2-H/3)) & ui_in[0])
-        if(in_square[i] < 4'd10 )
-          in_square[i] <= in_circle[i] + 4'd1;
-        else
-          in_square[i] <= 4'd0;
-    end
-  end
-
 
 //****************************************************//
 //******************* DIGITS *************************//
 //****************************************************//
-
   parameter DIGIT_WIDTH = 16;
   parameter DIGIT_HEIGTH = 16;
+  parameter pi_pos_x = 0;
+  parameter pi_pos_y = 0;
 
-  parameter d0_y = 1;
-  parameter d0_x = 16;
-  reg [N_DIGITS-1:0] d0;
-  
-  for(i=0; i < N_DIGITS; i=i+1) begin 
-    always @(posedge clk) begin
-      case (in_circle[i])
-        4'd0: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        4'd1: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & one[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        4'd2: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & two[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];      
-        4'd3: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & three[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        4'd4: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & four[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        4'd5: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & five[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        4'd6: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & six[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        4'd7: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & seven[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        4'd8: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & eight[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];          
-        4'd9: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & nine[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];                
-        default: d0[i] <= (pix_x > (d0_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d0_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d0_y*DIGIT_HEIGTH & pix_y < (d0_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]]; 
-      endcase
-    end
+  wire [N_DIGITS-1:0] numerator_digits;
+  wire [7:0] index [N_DIGITS-1:0];
+  wire numerator;
+  for(i=0; i< N_DIGITS; i=i+1) begin  
+  assign index[i] = (in_circle /(32'd10**i)) % 32'd10;
+
+  assign numerator_digits[i] = digits_rom[DIGIT_HEIGTH*index[i]+{4'd0,pix_y[3:0]}][DIGIT_WIDTH-pix_x[3:0]] 
+                  & pix_x > (N_DIGITS-i)*DIGIT_WIDTH+pi_pos_x 
+                  & pix_x < (N_DIGITS-i)*DIGIT_WIDTH+pi_pos_x + DIGIT_WIDTH
+                  & pix_y > pi_pos_y
+                  & pix_y < pi_pos_y + DIGIT_HEIGTH; 
   end
-
-  parameter d1_y = 3;
-  parameter d1_x = 16;
-  reg [N_DIGITS-1:0] d1;
-
-  for(i=0; i < N_DIGITS; i=i+1) begin 
-    always @(posedge clk) begin
-      case (in_square[i])
-        0: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        1: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & one[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        2: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & two[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];      
-        3: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & three[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        4: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & four[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        5: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & five[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        6: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & six[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];        
-        7: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & seven[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];               
-        8: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & eight[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];          
-        9: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & nine[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];                
-        default: d1[i] <= (pix_x > (d1_x+N_DIGITS-i-1)*DIGIT_WIDTH & pix_x < (d1_x+N_DIGITS-i)*DIGIT_WIDTH) & (pix_y > d1_y*DIGIT_HEIGTH & pix_y < (d1_y+1)*DIGIT_HEIGTH) & zero[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]]; 
-      endcase
-    end
-  end
-
-  parameter d2_y = 1;
-  parameter d2_x = 15;
-  wire digit2;
-  assign digit2 = (pix_x > (d2_x-1)*DIGIT_WIDTH & pix_x < (d2_x)*DIGIT_WIDTH) & (pix_y > d2_y*DIGIT_HEIGTH & pix_y < (d2_y+1)*DIGIT_HEIGTH) & pi[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
-
-  parameter d3_y = 2;
-  parameter d3_x = 16;
-  wire digit3;
-  assign digit3 = (pix_x > (d3_x-1)*DIGIT_WIDTH & pix_x < (d3_x)*DIGIT_WIDTH) & (pix_y > d3_y*DIGIT_HEIGTH & pix_y < (d3_y+1)*DIGIT_HEIGTH) & equal[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
-
-  parameter d4_y = 3;
-  parameter d4_x = 15;
-  wire digit4;
-  assign digit4 = (pix_x > (d4_x-1)*DIGIT_WIDTH & pix_x < (d4_x)*DIGIT_WIDTH) & (pix_y > d4_y*DIGIT_HEIGTH & pix_y < (d4_y+1)*DIGIT_HEIGTH) & four[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
-
-/*
-  parameter dgt0_x = 0;
-  parameter dgt0_y = 0;
-  wire digit0;
-  assign digit0 = (pix_x > dgt0_x*DIGIT_WIDTH & pix_x < (dgt0_x+1)*DIGIT_WIDTH) & 
-                  (pix_y > dgt0_y*DIGIT_HEIGTH & pix_y < (dgt0_y+1)*DIGIT_HEIGTH) & 
-                  digit[pix_y[3:0]][DIGIT_WIDTH-pix_x[3:0]];
-*/
+  assign numerator = numerator_digits[0] | 
+                     numerator_digits[1] |
+                     numerator_digits[2] |
+                     numerator_digits[3] |
+                     numerator_digits[4] |
+                     numerator_digits[5] |
+                     numerator_digits[6] |
+                     numerator_digits[7] |
+                     numerator_digits[8] |                  
+                     numerator_digits[9];
 
 //****************************************************//
 //******************* DISPAYS ************************//
 //****************************************************//
-
-  wire digit0;
-  wire digit1;
-  assign digit0 = d0[0] | d0[1] | d0[2] | d0[3];
-  assign digit1 = d1[0] | d1[1] | d1[2] | d1[3];
-
-  wire digits;
-  assign digits = digit0 | digit1 | digit2 | digit3 | digit4 | line;
 
   wire board; 
   assign board = circle | square ;
 
   assign R = video_active & board ? 2'b11 : 2'b00;
   assign G = video_active & random_point ? 2'b11 : 2'b00;
-  assign B = video_active & digits ? 2'b11 : 2'b00;
+  assign B = video_active & numerator ? 2'b11 : 2'b00;
 
 //********************************************************************//
 //******************* RANDOM NUMBER GENERATOR ************************//
@@ -253,223 +134,179 @@ module tt_um_dantecpp_vga_montecarlo_pi_calculator(
 //*******************************************************//
 //******************* DIGITS ROM ************************//
 //*******************************************************//
-reg [15:0] zero[15:0];
-reg [15:0] one[15:0];
-reg [15:0] two[15:0];
-reg [15:0] three[15:0];
-reg [15:0] four[15:0];
-reg [15:0] five[15:0];
-reg [15:0] six[15:0];
-reg [15:0] seven[15:0];
-reg [15:0] eight[15:0];
-reg [15:0] nine[15:0];
-reg [15:0] pi[15:0];
-reg [15:0] equal[15:0];
+
+reg [15:0] digits_rom [159:0];
 
 initial begin
-  zero[0]  = 16'b0000000000000000;
-  zero[1]  = 16'b0000011111100000;
-  zero[2]  = 16'b0000111111110000;
-  zero[3]  = 16'b0001100000011000;
-  zero[4]  = 16'b0001100000011000;
-  zero[5]  = 16'b0001100000011000;
-  zero[6]  = 16'b0001100000011000;
-  zero[7]  = 16'b0001100000011000;
-  zero[8]  = 16'b0001100000011000;
-  zero[9]  = 16'b0001100000011000;
-  zero[10] = 16'b0001100000011000;
-  zero[11] = 16'b0001100000011000;
-  zero[12] = 16'b0001100000011000;
-  zero[13] = 16'b0000111111110000;
-  zero[14] = 16'b0000011111100000;
-  zero[15] = 16'b0000000000000000;
+  digits_rom[0]  = 16'b0000000000000000;
+  digits_rom[1]  = 16'b0000011111100000;
+  digits_rom[2]  = 16'b0000111111110000;
+  digits_rom[3]  = 16'b0001100000011000;
+  digits_rom[4]  = 16'b0001100000011000;
+  digits_rom[5]  = 16'b0001100000011000;
+  digits_rom[6]  = 16'b0001100000011000;
+  digits_rom[7]  = 16'b0001100000011000;
+  digits_rom[8]  = 16'b0001100000011000;
+  digits_rom[9]  = 16'b0001100000011000;
+  digits_rom[10] = 16'b0001100000011000;
+  digits_rom[11] = 16'b0001100000011000;
+  digits_rom[12] = 16'b0001100000011000;
+  digits_rom[13] = 16'b0000111111110000;
+  digits_rom[14] = 16'b0000011111100000;
+  digits_rom[15] = 16'b0000000000000000;
 
-  one[0]  = 16'b0000000000000000;
-  one[1]  = 16'b0000000011000000;
-  one[2]  = 16'b0000000111000000;
-  one[3]  = 16'b0000001111000000;
-  one[4]  = 16'b0000000011000000;
-  one[5]  = 16'b0000000011000000;
-  one[6]  = 16'b0000000011000000;
-  one[7]  = 16'b0000000011000000;
-  one[8]  = 16'b0000000011000000;
-  one[9]  = 16'b0000000011000000;
-  one[10] = 16'b0000000011000000;
-  one[11] = 16'b0000000011000000;
-  one[12] = 16'b0000000011000000;
-  one[13] = 16'b0000000111100000;
-  one[14] = 16'b0000001111110000;
-  one[15] = 16'b0000000000000000;
+  digits_rom[16]  = 16'b0000000000000000;
+  digits_rom[17]  = 16'b0000000011000000;
+  digits_rom[18]  = 16'b0000000111000000;
+  digits_rom[19]  = 16'b0000001111000000;
+  digits_rom[20]  = 16'b0000000011000000;
+  digits_rom[21]  = 16'b0000000011000000;
+  digits_rom[22]  = 16'b0000000011000000;
+  digits_rom[23]  = 16'b0000000011000000;
+  digits_rom[24]  = 16'b0000000011000000;
+  digits_rom[25]  = 16'b0000000011000000;
+  digits_rom[26]  = 16'b0000000011000000;
+  digits_rom[27]  = 16'b0000000011000000;
+  digits_rom[28]  = 16'b0000000011000000;
+  digits_rom[29]  = 16'b0000000111100000;
+  digits_rom[30]  = 16'b0000001111110000;
+  digits_rom[31]  = 16'b0000000000000000;
 
-  two[0] = 16'b0000111111110000;
-  two[1] = 16'b0001111111111000;
-  two[2] = 16'b0011000000110000;
-  two[3] = 16'b0011000000011000;
-  two[4] = 16'b0000000000011000;
-  two[5] = 16'b0000000000110000;
-  two[6] = 16'b0000000001110000;
-  two[7] = 16'b0000000011100000;
-  two[8] = 16'b0000000111000000;
-  two[9] = 16'b0000001110000000;
-  two[10] = 16'b0000011100000000;
-  two[11] = 16'b0000111000000000;
-  two[12] = 16'b0001110000000000;
-  two[13] = 16'b0011100000000000;
-  two[14] = 16'b0111000000000000;
-  two[15] = 16'b1111111111111110;
+  digits_rom[32] = 16'b0000111111110000;
+  digits_rom[33] = 16'b0001111111111000;
+  digits_rom[34] = 16'b0011000000110000;
+  digits_rom[35] = 16'b0011000000011000;
+  digits_rom[36] = 16'b0000000000011000;
+  digits_rom[37] = 16'b0000000000110000;
+  digits_rom[38] = 16'b0000000001110000;
+  digits_rom[39] = 16'b0000000011100000;
+  digits_rom[40] = 16'b0000000111000000;
+  digits_rom[41] = 16'b0000001110000000;
+  digits_rom[42] = 16'b0000011100000000;
+  digits_rom[43] = 16'b0000111000000000;
+  digits_rom[44] = 16'b0001110000000000;
+  digits_rom[45] = 16'b0011100000000000;
+  digits_rom[46] = 16'b0111000000000000;
+  digits_rom[47] = 16'b1111111111111110;
 
-  three[0] = 16'b0000111111110000;
-  three[1] = 16'b0001111111111000;
-  three[2] = 16'b0011000000111000;
-  three[3] = 16'b0011000000011000;
-  three[4] = 16'b0000000000011000;
-  three[5] = 16'b0000000000111000;
-  three[6] = 16'b0000000001110000;
-  three[7] = 16'b0000000011100000;
-  three[8] = 16'b0000000011100000;
-  three[9] = 16'b0000000001110000;
-  three[10] = 16'b0000000000111000;
-  three[11] = 16'b0011000000011000;
-  three[12] = 16'b0011000000111000;
-  three[13] = 16'b0001111111111000;
-  three[14] = 16'b0000111111110000;
-  three[15] = 16'b0000000000000000;
+  digits_rom[48] = 16'b0000111111110000;
+  digits_rom[49] = 16'b0001111111111000;
+  digits_rom[50] = 16'b0011000000111000;
+  digits_rom[51] = 16'b0011000000011000;
+  digits_rom[52] = 16'b0000000000011000;
+  digits_rom[53] = 16'b0000000000111000;
+  digits_rom[54] = 16'b0000000001110000;
+  digits_rom[55] = 16'b0000000011100000;
+  digits_rom[56] = 16'b0000000011100000;
+  digits_rom[57] = 16'b0000000001110000;
+  digits_rom[58] = 16'b0000000000111000;
+  digits_rom[59] = 16'b0011000000011000;
+  digits_rom[60] = 16'b0011000000111000;
+  digits_rom[61] = 16'b0001111111111000;
+  digits_rom[62] = 16'b0000111111110000;
+  digits_rom[63] = 16'b0000000000000000;
 
-  four[0] = 16'b0000000001110000;
-  four[1] = 16'b0000000011110000;
-  four[2] = 16'b0000000111110000;
-  four[3] = 16'b0000001111110000;
-  four[4] = 16'b0000011101110000;
-  four[5] = 16'b0000111001110000;
-  four[6] = 16'b0001110001110000;
-  four[7] = 16'b0011100001110000;
-  four[8] = 16'b0111000001110000;
-  four[9] = 16'b1111111111111110;
-  four[10] = 16'b1111111111111110;
-  four[11] = 16'b0000000001110000;
-  four[12] = 16'b0000000001110000;
-  four[13] = 16'b0000000001110000;
-  four[14] = 16'b0000000001110000;
-  four[15] = 16'b0000000001110000;
+  digits_rom[64] = 16'b0000000001110000;
+  digits_rom[65] = 16'b0000000011110000;
+  digits_rom[66] = 16'b0000000111110000;
+  digits_rom[67] = 16'b0000001111110000;
+  digits_rom[68] = 16'b0000011101110000;
+  digits_rom[69] = 16'b0000111001110000;
+  digits_rom[70] = 16'b0001110001110000;
+  digits_rom[71] = 16'b0011100001110000;
+  digits_rom[72] = 16'b0111000001110000;
+  digits_rom[73] = 16'b1111111111111110;
+  digits_rom[74] = 16'b1111111111111110;
+  digits_rom[75] = 16'b0000000001110000;
+  digits_rom[76] = 16'b0000000001110000;
+  digits_rom[77] = 16'b0000000001110000;
+  digits_rom[78] = 16'b0000000001110000;
+  digits_rom[79] = 16'b0000000001110000;
 
-  five[0] = 16'b0011111111111000;
-  five[1] = 16'b0011111111111000;
-  five[2] = 16'b0011000000000000;
-  five[3] = 16'b0011000000000000;
-  five[4] = 16'b0011111111100000;
-  five[5] = 16'b0011111111110000;
-  five[6] = 16'b0000000000110000;
-  five[7] = 16'b0000000000110000;
-  five[8] = 16'b0000000000110000;
-  five[9] = 16'b0000000000110000;
-  five[10] = 16'b0011000000110000;
-  five[11] = 16'b0011000000110000;
-  five[12] = 16'b0011111111110000;
-  five[13] = 16'b0011111111111000;
-  five[14] = 16'b0000000000000000;
-  five[15] = 16'b0000000000000000;
+  digits_rom[80] = 16'b0011111111111000;
+  digits_rom[81] = 16'b0011111111111000;
+  digits_rom[82] = 16'b0011000000000000;
+  digits_rom[83] = 16'b0011000000000000;
+  digits_rom[84] = 16'b0011111111100000;
+  digits_rom[85] = 16'b0011111111110000;
+  digits_rom[86] = 16'b0000000000110000;
+  digits_rom[87] = 16'b0000000000110000;
+  digits_rom[88] = 16'b0000000000110000;
+  digits_rom[89] = 16'b0000000000110000;
+  digits_rom[90] = 16'b0011000000110000;
+  digits_rom[91] = 16'b0011000000110000;
+  digits_rom[92] = 16'b0011111111110000;
+  digits_rom[93] = 16'b0011111111111000;
+  digits_rom[94] = 16'b0000000000000000;
+  digits_rom[95] = 16'b0000000000000000;
 
-  six[0] = 16'b0000011111110000;
-  six[1] = 16'b0001111111111000;
-  six[2] = 16'b0011000000000000;
-  six[3] = 16'b0110000000000000;
-  six[4] = 16'b0110000000000000;
-  six[5] = 16'b0111111111100000;
-  six[6] = 16'b0111111111110000;
-  six[7] = 16'b0110000000110000;
-  six[8] = 16'b0110000000110000;
-  six[9] = 16'b0110000000110000;
-  six[10] = 16'b0110000000110000;
-  six[11] = 16'b0011000000111000;
-  six[12] = 16'b0001111111110000;
-  six[13] = 16'b0000111111100000;
-  six[14] = 16'b0000000000000000;
-  six[15] = 16'b0000000000000000;
+  digits_rom[96] = 16'b0000011111110000;
+  digits_rom[97] = 16'b0001111111111000;
+  digits_rom[98] = 16'b0011000000000000;
+  digits_rom[99] = 16'b0110000000000000;
+  digits_rom[100] = 16'b0110000000000000;
+  digits_rom[101] = 16'b0111111111100000;
+  digits_rom[102] = 16'b0111111111110000;
+  digits_rom[103] = 16'b0110000000110000;
+  digits_rom[104] = 16'b0110000000110000;
+  digits_rom[105] = 16'b0110000000110000;
+  digits_rom[106] = 16'b0110000000110000;
+  digits_rom[107] = 16'b0011000000111000;
+  digits_rom[108] = 16'b0001111111110000;
+  digits_rom[109] = 16'b0000111111100000;
+  digits_rom[110] = 16'b0000000000000000;
+  digits_rom[111] = 16'b0000000000000000;
 
-  seven[0] = 16'b1111111111111111;
-  seven[1] = 16'b1111111111111111;
-  seven[2] = 16'b0000000001111111;
-  seven[3] = 16'b0000000001111111;
-  seven[4] = 16'b0000000000111111;
-  seven[5] = 16'b0000000000111111;
-  seven[6] = 16'b0000000000011111;
-  seven[7] = 16'b0000000000011111;
-  seven[8] = 16'b0000000000001111;
-  seven[9] = 16'b0000000000001111;
-  seven[10] = 16'b0000000000000111;
-  seven[11] = 16'b0000000000000111;
-  seven[12] = 16'b0000000000000011;
-  seven[13] = 16'b0000000000000011;
-  seven[14] = 16'b0000000000000001;
-  seven[15] = 16'b0000000000000001;
+  digits_rom[112] = 16'b1111111111111111;
+  digits_rom[113] = 16'b1111111111111111;
+  digits_rom[114] = 16'b0000000001111111;
+  digits_rom[115] = 16'b0000000001111111;
+  digits_rom[116] = 16'b0000000000111111;
+  digits_rom[117] = 16'b0000000000111111;
+  digits_rom[118] = 16'b0000000000011111;
+  digits_rom[119] = 16'b0000000000011111;
+  digits_rom[120] = 16'b0000000000001111;
+  digits_rom[121] = 16'b0000000000001111;
+  digits_rom[122] = 16'b0000000000000111;
+  digits_rom[123] = 16'b0000000000000111;
+  digits_rom[124] = 16'b0000000000000011;
+  digits_rom[125] = 16'b0000000000000011;
+  digits_rom[126] = 16'b0000000000000001;
+  digits_rom[127] = 16'b0000000000000001;
 
-  eight[0] = 16'b0000111111110000;
-  eight[1] = 16'b0001111111111000;
-  eight[2] = 16'b0011000000110000;
-  eight[3] = 16'b0011000000110000;
-  eight[4] = 16'b0011000000110000;
-  eight[5] = 16'b0011000000110000;
-  eight[6] = 16'b0001111111110000;
-  eight[7] = 16'b0001111111110000;
-  eight[8] = 16'b0011000000110000;
-  eight[9] = 16'b0011000000110000;
-  eight[10] = 16'b0011000000110000;
-  eight[11] = 16'b0011000000110000;
-  eight[12] = 16'b0001111111110000;
-  eight[13] = 16'b0001111111110000;
-  eight[14] = 16'b0000111111110000;
-  eight[15] = 16'b0000000000000000;
+  digits_rom[128] = 16'b0000111111110000;
+  digits_rom[129] = 16'b0001111111111000;
+  digits_rom[130] = 16'b0011000000110000;
+  digits_rom[131] = 16'b0011000000110000;
+  digits_rom[132] = 16'b0011000000110000;
+  digits_rom[133] = 16'b0011000000110000;
+  digits_rom[134] = 16'b0001111111110000;
+  digits_rom[135] = 16'b0001111111110000;
+  digits_rom[136] = 16'b0011000000110000;
+  digits_rom[137] = 16'b0011000000110000;
+  digits_rom[138] = 16'b0011000000110000;
+  digits_rom[139] = 16'b0011000000110000;
+  digits_rom[140] = 16'b0001111111110000;
+  digits_rom[141] = 16'b0001111111110000;
+  digits_rom[142] = 16'b0000111111110000;
+  digits_rom[143] = 16'b0000000000000000;
 
-  nine[0] =  16'b0000111111110000;
-  nine[1] =  16'b0001111111111000;
-  nine[2] =  16'b0011000000110000;
-  nine[3] =  16'b0011000000110000;
-  nine[4] =  16'b0011000000110000;
-  nine[5] =  16'b0011000000110000;
-  nine[6] =  16'b0001111111110000;
-  nine[7] =  16'b0001111111111000;
-  nine[8] =  16'b0000000001110000;
-  nine[9] =  16'b0000000011100000;
-  nine[10] = 16'b0000000111000000;
-  nine[11] = 16'b0000001110000000;
-  nine[12] = 16'b0000011100000000;
-  nine[13] = 16'b0000111000000000;
-  nine[14] = 16'b0001110000000000;
-  nine[15] = 16'b0011100000000000;
-
-  pi[0]  = 16'b0000000000000000;
-  pi[1]  = 16'b0000000000000000;
-  pi[2]  = 16'b1111111111111111;
-  pi[3]  = 16'b1111111111111111;
-  pi[4]  = 16'b0000111100001111;
-  pi[5]  = 16'b0000111100001111;
-  pi[6]  = 16'b0000111100001111;
-  pi[7]  = 16'b0000111100001111;
-  pi[8]  = 16'b0000111100001111;
-  pi[9]  = 16'b0000111100001111;
-  pi[10] = 16'b0000111100001111;
-  pi[11] = 16'b0000111100001111;
-  pi[12] = 16'b0000111100001111;
-  pi[13] = 16'b0000111100001111;
-  pi[14] = 16'b0000111100001111;
-  pi[15] = 16'b0000000000000000;
-
-  equal[0]  = 16'b0000000000000000;
-  equal[1]  = 16'b0000000000000000;
-  equal[2]  = 16'b0000000000000000;
-  equal[3]  = 16'b0000000000000000;
-  equal[4]  = 16'b0001100001100001;
-  equal[5]  = 16'b0011110011110011;
-  equal[6]  = 16'b0110011100111100;
-  equal[7]  = 16'b0100001000001000;
-  equal[8]  = 16'b0000000000000000;
-  equal[9]  = 16'b0000000000000000;
-  equal[10] = 16'b0001100001100001;
-  equal[11] = 16'b0011110011110011;
-  equal[12] = 16'b0110011100111100;
-  equal[13] = 16'b0100001000001000;
-  equal[14] = 16'b0000000000000000;
-  equal[15] = 16'b0000000000000000;
+  digits_rom[144] = 16'b0000111111110000;
+  digits_rom[145] = 16'b0001111111111000;
+  digits_rom[146] = 16'b0011000000110000;
+  digits_rom[147] = 16'b0011000000110000;
+  digits_rom[148] = 16'b0011000000110000;
+  digits_rom[149] = 16'b0011000000110000;
+  digits_rom[150] = 16'b0001111111110000;
+  digits_rom[151] = 16'b0001111111111000;
+  digits_rom[152] = 16'b0000000001110000;
+  digits_rom[153] = 16'b0000000011100000;
+  digits_rom[154] = 16'b0000000111000000;
+  digits_rom[155] = 16'b0000001110000000;
+  digits_rom[156] = 16'b0000011100000000;
+  digits_rom[157] = 16'b0000111000000000;
+  digits_rom[158] = 16'b0001110000000000;
+  digits_rom[159] = 16'b0011100000000000;
 end
 
 endmodule
